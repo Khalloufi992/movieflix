@@ -1,1 +1,5 @@
-# JSX-And-React-Components-Checkpoint
+<<<<<<< HEAD
+version from one side
+=======
+version from other side
+>>>>>>> commit
