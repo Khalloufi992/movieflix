@@ -1,3 +1,7 @@
+// This object represents the product data
+// It contains name, price, description, and image URL
+
+
 const product = {
   name: "iPhone 15",
   price: "$999",

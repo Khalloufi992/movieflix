@@ -1,4 +1,7 @@
 import product from "../Product";
+
+// This component displays the product image
+
 function Image() {
   return (
     <img
