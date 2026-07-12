@@ -1,112 +1,156 @@
-import React, { useState } from "react";
-import MovieList from "./components/MovieList";
-import Filter from "./components/Filter";
-import "./App.css";
-function App() {
-  const [movies, setMovies] = useState([
-    {
-      title: "Breaking Bad",
-      description: "A chemistry teacher becomes a drug kingpin.",
-      posterURL:
-        "https://m.media-amazon.com/images/I/81VStYnDGrL._AC_SY679_.jpg",
-      rating: 9,
-    },
-    {
-      title: "Money Heist",
-      description: "A group of robbers attack the Royal Mint.",
-      posterURL:
-        "https://m.media-amazon.com/images/I/91OCx9M6z-L._AC_SY679_.jpg",
-      rating: 8,
-    },
-  ]);
+import React, { useState } from 'react';
+import { BrowserRouter, Routes, Route, useParams, useNavigate } from 'react-router-dom';
+import { INITIAL_MOVIES } from './Movie';
+import Filter from './components/Filter';
+import MovieList from './components/MovieList';
+import AddMovieModal from './components/AddMovieModal';
+import StarRating from './components/StarRating';
+import './App.css';
 
-  const [titleFilter, setTitleFilter] = useState("");
-  const [ratingFilter, setRatingFilter] = useState("");
+// ===== HOME PAGE =====
+function HomePage({ movies, setMovies }) {
+  const [titleFilter, setTitleFilter] = useState('');
+  const [rateFilter, setRateFilter] = useState(0);
+  const [showModal, setShowModal] = useState(false);
 
-  const [newMovie, setNewMovie] = useState({
-    title: "",
-    description: "",
-    posterURL: "",
-    rating: "",
+  const filteredMovies = movies.filter(movie => {
+    const matchesTitle = movie.title.toLowerCase().includes(titleFilter.toLowerCase());
+    const matchesRate = rateFilter === 0 || movie.rating >= rateFilter;
+    return matchesTitle && matchesRate;
   });
 
-  const addMovie = () => {
-    if (
-      newMovie.title &&
-      newMovie.description &&
-      newMovie.posterURL &&
-      newMovie.rating
-    ) {
-      setMovies([...movies, newMovie]);
-
-      setNewMovie({
-        title: "",
-        description: "",
-        posterURL: "",
-        rating: "",
-      });
-    }
-  };
-
-  const filteredMovies = movies.filter(
-    (movie) =>
-      movie.title.toLowerCase().includes(titleFilter.toLowerCase()) &&
-      movie.rating >= (ratingFilter || 0)
-  );
+  const handleAddMovie = (newMovie) => setMovies(prev => [newMovie, ...prev]);
+  const handleDeleteMovie = (id) => setMovies(prev => prev.filter(m => m.id !== id));
 
   return (
-    <div className="App">
-      <h1>🎬 Movie App</h1>
+    <div className="page">
+      <div className="container">
+        <header className="app-header">
+          <div>
+            <h1 className="app-title">🎬 MovieFlix</h1>
+            <p className="app-subtitle">Your personal movie collection</p>
+          </div>
+          <button className="btn-add" onClick={() => setShowModal(true)}>
+            <span>+</span> Add Movie
+          </button>
+        </header>
 
-      <Filter
-        titleFilter={titleFilter}
-        setTitleFilter={setTitleFilter}
-        ratingFilter={ratingFilter}
-        setRatingFilter={setRatingFilter}
-      />
+        <Filter
+          titleFilter={titleFilter}
+          setTitleFilter={setTitleFilter}
+          rateFilter={rateFilter}
+          setRateFilter={setRateFilter}
+        />
 
-      <h2>Add New Movie</h2>
+        <div className="results-count">
+          Showing <strong>{filteredMovies.length}</strong> of {movies.length} movies
+          {(titleFilter || rateFilter > 0) && <span> (filtered)</span>}
+        </div>
 
-      <input
-        type="text"
-        placeholder="Title"
-        value={newMovie.title}
-        onChange={(e) =>
-          setNewMovie({ ...newMovie, title: e.target.value })
-        }
-      />
+        <MovieList movies={filteredMovies} onDelete={handleDeleteMovie} />
+      </div>
 
-      <input
-        type="text"
-        placeholder="Description"
-        value={newMovie.description}
-        onChange={(e) =>
-          setNewMovie({ ...newMovie, description: e.target.value })
-        }
-      />
-
-      <input
-        type="text"
-        placeholder="Poster URL"
-        value={newMovie.posterURL}
-        onChange={(e) =>
-          setNewMovie({ ...newMovie, posterURL: e.target.value })
-        }
-      />
-
-      <input
-        type="number"
-        placeholder="Rating"
-        value={newMovie.rating}
-        onChange={(e) =>
-          setNewMovie({ ...newMovie, rating: Number(e.target.value) })
-        }
-      />
-
-      <button onClick={addMovie}>Add Movie</button>
-
-      <MovieList movies={filteredMovies} />
+      <AddMovieModal isOpen={showModal} onClose={() => setShowModal(false)} onAdd={handleAddMovie} />
     </div>
+  );
+}
+
+// ===== MOVIE DETAIL PAGE =====
+function MovieDetailPage({ movies }) {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const movie = movies.find(m => m.id === Number(id));
+
+  if (!movie) {
+    return (
+      <div className="page">
+        <div className="container">
+          <div className="empty-state">
+            <div className="empty-state-icon">🎭</div>
+            <h3 className="empty-state-title">Movie not found</h3>
+            <button className="btn btn-primary" onClick={() => navigate('/')} style={{ marginTop: 20 }}>
+              ← Back to Home
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const getYouTubeId = (url) => {
+    const match = url.match(/embed\/([^?&]+)/);
+    return match ? match[1] : '';
+  };
+
+  const videoId = getYouTubeId(movie.trailerURL);
+
+  return (
+    <div className="page detail-page">
+      <div className="container">
+        <button className="back-button" onClick={() => navigate('/')}>
+          <span>←</span> Back to Movies
+        </button>
+
+        <div className="detail-layout">
+          <div className="detail-poster-section">
+            <img src={movie.posterURL} alt={movie.title} className="detail-poster" />
+            <div className="detail-rating-box">
+              <StarRating rating={movie.rating} size={24} />
+              <span className="detail-rating-text">{movie.rating}/5</span>
+            </div>
+          </div>
+
+          <div className="detail-info">
+            <h1 className="detail-title">{movie.title}</h1>
+            <div className="detail-meta">
+              <span className="detail-badge">{movie.year}</span>
+              <span className="detail-badge">{movie.genre}</span>
+              <span className="detail-badge">{movie.director}</span>
+            </div>
+
+            <div className="detail-section">
+              <h3 className="detail-section-title">Synopsis</h3>
+              <p className="detail-description">{movie.description}</p>
+            </div>
+
+            <div className="detail-section">
+              <h3 className="detail-section-title">🎬 Trailer</h3>
+              <div className="trailer-wrapper">
+                {videoId ? (
+                  <iframe
+                    src={`https://www.youtube.com/embed/${videoId}`}
+                    title={`${movie.title} Trailer`}
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    className="trailer-iframe"
+                  />
+                ) : (
+                  <div className="trailer-placeholder">
+                    <span>▶</span>
+                    <p>Trailer unavailable</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ===== APP =====
+function App() {
+  const [movies, setMovies] = useState(INITIAL_MOVIES);
+
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<HomePage movies={movies} setMovies={setMovies} />} />
+        <Route path="/movie/:id" element={<MovieDetailPage movies={movies} />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 
